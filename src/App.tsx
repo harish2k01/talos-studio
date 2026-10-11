@@ -172,7 +172,10 @@ export function App() {
               key={p.name}
               aria-current={page === p.name ? 'page' : undefined}
               className={'nav-item ' + (page === p.name ? 'selected' : '')}
-              onClick={() => setPage(p.name)}
+              onClick={() => {
+                setSelected(undefined);
+                setPage(p.name);
+              }}
             >
               <p.icon size={18} />
               {p.name}
@@ -196,19 +199,19 @@ export function App() {
             <div className="breadcrumb">
               Workspace <ChevronRight size={12} /> {context || 'Connection'}
             </div>
-            <h1>{page === 'Overview' ? 'Your cluster, at a glance.' : page}</h1>
+            <h1>{selected ? selected.name : page === 'Overview' ? 'Your cluster, at a glance.' : page}</h1>
             <p className="muted">
-              {
-                (
-                  {
-                    Overview: 'Machine health and the next thing that needs your attention.',
-                    Machines: 'Inspect your machines, services and hardware.',
-                    Configuration: 'Review a targeted configuration patch before applying it.',
-                    Operations: 'Results from this bridge session. Recovery is verified separately.',
-                    Connections: 'Local tools and cluster access, in one place.',
-                  } as Record<string, string>
-                )[page]
-              }
+              {selected
+                ? `${role(selected.role)} · ${selected.address} · machine workspace`
+                : (
+                    {
+                      Overview: 'Machine health and the next thing that needs your attention.',
+                      Machines: 'Inspect your machines, services and hardware.',
+                      Configuration: 'Review a targeted configuration patch before applying it.',
+                      Operations: 'Results from this bridge session. Recovery is verified separately.',
+                      Connections: 'Local tools and cluster access, in one place.',
+                    } as Record<string, string>
+                  )[page]}
             </p>
           </div>
           <div className="header-actions">
@@ -255,7 +258,20 @@ export function App() {
             Demo mode · sample machines and logs · no cluster commands
           </div>
         )}
-        {page === 'Overview' && (
+        {selected && (
+          <MachineWorkspace
+            context={context}
+            machine={machines.find((n) => n.address === selected.address) || selected}
+            machines={machines}
+            select={setSelected}
+            writes={!!connection?.writes}
+            demo={!!connection?.demo}
+            close={() => setSelected(undefined)}
+            reboot={reviewReboot}
+            reviewing={!!plan}
+          />
+        )}
+        {!selected && page === 'Overview' && (
           <>
             <div className="summary-grid">
               <Metric
@@ -313,7 +329,7 @@ export function App() {
             )}
           </>
         )}
-        {['Overview', 'Machines'].includes(page) && (
+        {!selected && ['Overview', 'Machines'].includes(page) && (
           <section>
             <div className="section-header">
               <h2>
@@ -400,11 +416,11 @@ export function App() {
             </div>
           </section>
         )}
-        {page === 'Configuration' && (
+        {!selected && page === 'Configuration' && (
           <Configuration context={context} machines={machines} onPlan={setPlan} notify={notify} />
         )}
-        {page === 'Operations' && <History context={context} />}
-        {page === 'Connections' && (
+        {!selected && page === 'Operations' && <History context={context} />}
+        {!selected && page === 'Connections' && (
           <section className="panel connection-panel">
             <div className="section-header">
               <h2>Local bridge</h2>
@@ -451,16 +467,6 @@ export function App() {
           <span className="muted">{connection?.demo ? 'Demo' : 'Local bridge'} → talosctl → Talos API</span>
         </footer>
       </main>
-      {selected && (
-        <InspectorDrawer
-          context={context}
-          machine={selected}
-          writes={!!connection?.writes}
-          demo={!!connection?.demo}
-          close={() => setSelected(undefined)}
-          reboot={reviewReboot}
-        />
-      )}
       {plan && (
         <PlanDialog
           plan={plan}
@@ -516,17 +522,7 @@ function KV({ label, value }: { label: string; value: ReactNode }) {
     </div>
   );
 }
-function Modal({
-  title,
-  close,
-  children,
-  wide = false,
-}: {
-  title: string;
-  close: () => void;
-  children: ReactNode;
-  wide?: boolean;
-}) {
+function Modal({ title, close, children }: { title: string; close: () => void; children: ReactNode }) {
   const ref = useRef<HTMLElement>(null);
   const closeRef = useRef(close);
   closeRef.current = close;
@@ -563,20 +559,14 @@ function Modal({
   }, []);
   return (
     <div
-      className={'overlay ' + (wide ? 'centered' : '')}
+      className="overlay centered"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) close();
       }}
     >
-      <section
-        className={wide ? 'review-dialog' : 'inspector'}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        ref={ref}
-      >
+      <section className="review-dialog" role="dialog" aria-modal="true" aria-label={title} ref={ref}>
         <div className="dialog-heading">
-          <span className="eyebrow">{wide ? 'Operation review' : 'Machine inspector'}</span>
+          <span className="eyebrow">Operation review</span>
           <button className="icon-button" aria-label="Close dialog" onClick={close}>
             <X size={20} />
           </button>
@@ -586,13 +576,16 @@ function Modal({
     </div>
   );
 }
-function InspectorDrawer({
+function MachineWorkspace({
   context,
   machine,
   writes,
   demo,
   close,
   reboot,
+  machines,
+  select,
+  reviewing,
 }: {
   context: string;
   machine: Machine;
@@ -600,6 +593,9 @@ function InspectorDrawer({
   demo: boolean;
   close: () => void;
   reboot: (n: Machine) => Promise<void>;
+  machines: Machine[];
+  select: (n: Machine) => void;
+  reviewing: boolean;
 }) {
   const [data, setData] = useState<Inspector>(),
     [error, setError] = useState(''),
@@ -622,137 +618,246 @@ function InspectorDrawer({
       });
     return () => controller.abort();
   }, [context, machine.address, nonce]);
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !reviewing) close();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [close, reviewing]);
+  const healthy = data?.services.filter((s) => s.healthy === true).length || 0;
+  const unknown = data?.services.filter((s) => s.healthy === null).length || 0;
+  const unhealthy = data?.services.filter((s) => s.healthy === false).length || 0;
   return (
-    <Modal title={machine.name} close={close}>
-      <h1>{machine.name}</h1>
-      <div className="inspector-sub">
-        <span className={'status ' + stateClass(machine)}>
-          <span className="dot" />
-          {status(machine)}
-        </span>
-        <span className="muted">
-          {role(machine.role)} · {machine.address}
-        </span>
-      </div>
-      <div className="tabs" role="tablist" aria-label="Machine details">
-        {['Overview', 'Services', 'Logs', 'Hardware'].map((t) => (
+    <section className="machine-workspace" aria-label="Machine workspace">
+      <aside className="machine-switcher">
+        <button className="back-to-fleet" onClick={close}>
+          ← Back to fleet
+        </button>
+        <div className="switcher-heading">
+          <span className="eyebrow">Machines</span>
+          <span className="muted small">{machines.length}</span>
+        </div>
+        <nav aria-label="Switch machine">
+          {machines.map((n) => (
+            <button
+              key={n.address}
+              className={'switch-machine ' + (n.address === machine.address ? 'active' : '')}
+              aria-current={n.address === machine.address ? 'page' : undefined}
+              onClick={() => select(n)}
+            >
+              <Server size={16} />
+              <span>
+                <strong>{n.name}</strong>
+                <small>{n.address}</small>
+              </span>
+              <span className={'dot ' + stateClass(n)} />
+            </button>
+          ))}
+        </nav>
+        <p className="muted small">Switch machines without closing your current view.</p>
+      </aside>
+      <div className="machine-content">
+        <div className="workspace-toolbar">
+          <div className="inspector-sub">
+            <span className={'status ' + stateClass(machine)}>
+              <span className="dot" />
+              {status(machine)}
+            </span>
+            <span className="muted">
+              {role(machine.role)} · {machine.address}
+            </span>
+          </div>
           <button
-            key={t}
-            role="tab"
-            aria-selected={t === tab}
-            aria-controls="machine-tab-content"
-            id={'tab-' + t}
-            className={t === tab ? 'active' : ''}
-            onClick={() => setTab(t)}
+            className="icon-button"
+            aria-label="Refresh machine inspection"
+            disabled={loading}
+            onClick={() => setNonce((n) => n + 1)}
           >
-            {t}
+            <RefreshCw size={16} className={loading ? 'spin' : ''} />
           </button>
-        ))}
-      </div>
-      <div id="machine-tab-content" role="tabpanel" aria-labelledby={'tab-' + tab}>
-        {loading && (
-          <div className="empty">
-            <LoaderCircle className="spin" />
-            <p>Reading machine resources…</p>
-          </div>
-        )}
-        {error && (
-          <div role="alert" className="inline-error">
-            {error}
-            <button onClick={() => setNonce((n) => n + 1)}>Retry</button>
-          </div>
-        )}
-        {data && (
-          <>
-            {data.errors.length > 0 && <div className="inline-error">{data.errors.join('\n')}</div>}
-            {tab === 'Overview' && (
-              <>
-                <KV label="Stage" value={data.machine.stage} />
-                <KV label="Talos version" value={data.machine.version} />
-                <KV label="Checked" value={time(data.machine.checkedAt)} />
-                <KV
-                  label="Services healthy"
-                  value={`${data.services.filter((s) => s.healthy === true).length} / ${data.services.length}`}
-                />
-                <div className="section-gap">
-                  <h3>Maintenance</h3>
-                  <p className="muted">Review the target and impact before requesting a reboot.</p>
-                  <button
-                    disabled={!writes || !machine.reachable || machine.ready !== true || busy}
-                    onClick={() => {
-                      setBusy(true);
-                      void reboot(machine).finally(() => setBusy(false));
-                    }}
-                  >
-                    {busy ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />}Review
-                    reboot…
-                  </button>
-                  {!writes && <p className="muted small">Writes are disabled for this session.</p>}
-                </div>
-              </>
-            )}
-            {tab === 'Services' && (
-              <div>
-                {data.services.length === 0 && <p className="muted">Service status unavailable.</p>}
-                {data.services.map((s) => (
-                  <div className="service-row" key={s.name}>
-                    <span className="service-icon">
-                      <Activity size={15} />
-                    </span>
-                    <strong>{s.name}</strong>
-                    <span className={'status ' + (s.healthy === true ? 'good' : 'warn')}>
-                      {!s.running
-                        ? 'Stopped'
-                        : s.healthy === true
-                          ? 'Healthy'
-                          : s.healthy === false
-                            ? 'Unhealthy'
-                            : 'Health unknown'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {tab === 'Hardware' && (
-              <div className="hardware-sections">
-                {data.hardware.map((h) => (
-                  <section key={h.kind}>
-                    <h3>{h.kind}</h3>
-                    {h.error && <p className="inline-error">{h.error}</p>}
-                    {!h.error && !h.resources.length && <p className="muted">No resources reported.</p>}
-                    {h.resources.map((r) => (
-                      <details key={r.id}>
-                        <summary>
-                          {r.id}
-                          <span className="muted">
-                            {String(
-                              r.spec.model ||
-                                r.spec.productName ||
-                                r.spec.manufacturer ||
-                                r.spec.pretty_size ||
-                                '',
-                            )}
-                          </span>
-                        </summary>
-                        <pre>{JSON.stringify(r.spec, null, 2)}</pre>
-                      </details>
-                    ))}
+        </div>
+        <div className="tabs" role="tablist" aria-label="Machine details">
+          {['Overview', 'Services', 'Logs', 'Hardware'].map((t) => (
+            <button
+              key={t}
+              role="tab"
+              aria-selected={t === tab}
+              aria-controls="machine-tab-content"
+              id={'tab-' + t}
+              className={t === tab ? 'active' : ''}
+              onClick={() => setTab(t)}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        <div id="machine-tab-content" role="tabpanel" aria-labelledby={'tab-' + tab}>
+          {loading && (
+            <div className="empty">
+              <LoaderCircle className="spin" />
+              <p>Reading machine resources…</p>
+            </div>
+          )}
+          {error && (
+            <div role="alert" className="inline-error">
+              {error}
+              <button onClick={() => setNonce((n) => n + 1)}>Retry</button>
+            </div>
+          )}
+          {data && (
+            <>
+              {data.errors.length > 0 && <div className="inline-error">{data.errors.join('\n')}</div>}
+              {tab === 'Overview' && (
+                <div className="machine-overview">
+                  <section className="panel machine-facts">
+                    <h2>Machine status</h2>
+                    <KV label="Stage" value={data.machine.stage} />
+                    <KV label="Talos version" value={data.machine.version} />
+                    <KV label="Checked" value={time(data.machine.checkedAt)} />
+                    <KV label="Readiness" value={status(data.machine)} />
                   </section>
-                ))}
-              </div>
-            )}
-            {tab === 'Logs' && (
-              <Logs
-                context={context}
-                node={machine.address}
-                services={data.services.map((s) => s.name)}
-                demo={demo}
-              />
-            )}
-          </>
-        )}
+                  <section className="panel service-summary">
+                    <div className="section-header">
+                      <h2>Service health</h2>
+                      <button onClick={() => setTab('Services')}>
+                        View all <ArrowRight size={14} />
+                      </button>
+                    </div>
+                    <div className="service-totals">
+                      <div>
+                        <strong className="good">{healthy}</strong>
+                        <span>Healthy</span>
+                      </div>
+                      <div>
+                        <strong className={unhealthy ? 'warn' : ''}>{unhealthy}</strong>
+                        <span>Unhealthy</span>
+                      </div>
+                      <div>
+                        <strong className={unknown ? 'warn' : ''}>{unknown}</strong>
+                        <span>Unknown</span>
+                      </div>
+                    </div>
+                    <p className="muted small">Unknown health is reported separately from failed services.</p>
+                    <div className="service-preview">
+                      {data.services.slice(0, 6).map((s) => (
+                        <div key={s.name}>
+                          <span>{s.name}</span>
+                          <span className={'status ' + (s.healthy === true ? 'good' : 'warn')}>
+                            {s.healthy === true ? 'Healthy' : s.healthy === false ? 'Unhealthy' : 'Unknown'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                  <section className="panel machine-maintenance">
+                    <h3>Maintenance</h3>
+                    <p className="muted">Review the target and impact before requesting a reboot.</p>
+                    <button
+                      disabled={!writes || !machine.reachable || machine.ready !== true || busy}
+                      onClick={() => {
+                        setBusy(true);
+                        void reboot(machine).finally(() => setBusy(false));
+                      }}
+                    >
+                      {busy ? <LoaderCircle size={15} className="spin" /> : <RefreshCw size={15} />}Review
+                      reboot…
+                    </button>
+                    {!writes && <p className="muted small">Writes are disabled for this session.</p>}
+                  </section>
+                  <section className="panel machine-system">
+                    <h2>System identity</h2>
+                    {data.hardware
+                      .find((h) => h.kind === 'System')
+                      ?.resources.map((r) => (
+                        <div key={r.id}>
+                          {Object.entries(r.spec)
+                            .filter(([key]) => ['manufacturer', 'productName', 'version'].includes(key))
+                            .map(([key, value]) => (
+                              <KV
+                                key={key}
+                                label={
+                                  key === 'productName'
+                                    ? 'Model'
+                                    : key === 'version'
+                                      ? 'Hardware version'
+                                      : 'Manufacturer'
+                                }
+                                value={String(value)}
+                              />
+                            ))}
+                        </div>
+                      ))}
+                    <button onClick={() => setTab('Hardware')}>
+                      Explore hardware <ArrowRight size={14} />
+                    </button>
+                  </section>
+                </div>
+              )}
+              {tab === 'Services' && (
+                <div className="services-grid">
+                  {data.services.length === 0 && <p className="muted">Service status unavailable.</p>}
+                  {data.services.map((s) => (
+                    <div className="service-row" key={s.name}>
+                      <span className="service-icon">
+                        <Activity size={15} />
+                      </span>
+                      <strong>{s.name}</strong>
+                      <span className={'status ' + (s.healthy === true ? 'good' : 'warn')}>
+                        {!s.running
+                          ? 'Stopped'
+                          : s.healthy === true
+                            ? 'Healthy'
+                            : s.healthy === false
+                              ? 'Unhealthy'
+                              : 'Health unknown'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {tab === 'Hardware' && (
+                <div className="hardware-sections">
+                  {data.hardware.map((h) => (
+                    <section key={h.kind}>
+                      <h3>{h.kind}</h3>
+                      {h.error && <p className="inline-error">{h.error}</p>}
+                      {!h.error && !h.resources.length && <p className="muted">No resources reported.</p>}
+                      {h.resources.map((r) => (
+                        <details key={r.id}>
+                          <summary>
+                            {r.id}
+                            <span className="muted">
+                              {String(
+                                r.spec.model ||
+                                  r.spec.productName ||
+                                  r.spec.manufacturer ||
+                                  r.spec.pretty_size ||
+                                  '',
+                              )}
+                            </span>
+                          </summary>
+                          <pre>{JSON.stringify(r.spec, null, 2)}</pre>
+                        </details>
+                      ))}
+                    </section>
+                  ))}
+                </div>
+              )}
+              {tab === 'Logs' && (
+                <Logs
+                  key={machine.address}
+                  context={context}
+                  node={machine.address}
+                  services={data.services.map((s) => s.name)}
+                  demo={demo}
+                />
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </Modal>
+    </section>
   );
 }
 function Logs({
@@ -988,7 +1093,6 @@ function PlanDialog({
       close={() => {
         if (!busy) close();
       }}
-      wide
     >
       <h1>{plan.kind === 'reboot' ? 'Review machine reboot' : 'Review configuration patch'}</h1>
       <p className="muted">

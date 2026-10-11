@@ -34,7 +34,9 @@ test('fleet, inspector, logs, configuration review and context switching', async
   await page.getByRole('textbox', { name: 'Search machines' }).fill('worker-03');
   await expect(page.locator('.machine-card')).toHaveCount(1);
   await page.locator('.machine-card').click();
-  await expect(page.getByRole('dialog')).toContainText('Live inspection unavailable');
+  await expect(page.getByRole('region', { name: 'Machine workspace' })).toContainText(
+    'Live inspection unavailable',
+  );
   await page.keyboard.press('Escape');
   await page.getByRole('textbox', { name: 'Search machines' }).fill('');
   if (process.env.UPDATE_SCREENSHOTS) {
@@ -55,10 +57,23 @@ test('mobile layout, theme and keyboard dialog controls', async ({ page }) => {
   await page.getByRole('button', { name: 'Switch to light theme' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.locator('.machine-card').first().click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Machine workspace' })).toBeVisible();
+  await expect(page.locator('.machine-facts')).toContainText('running');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  for (const width of [320, 768, 1024]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.getByRole('tab', { name: 'Services' }).click();
+    await expect(page.locator('.service-row')).toHaveCount(4);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByRole('tab', { name: 'Hardware' }).click();
+    await expect(page.locator('.hardware-sections section')).toHaveCount(4);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByRole('tab', { name: 'Logs' }).click();
+    await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Machine workspace' })).toHaveCount(0);
 });
 
 test('ended log streams retain output and errors until explicitly refreshed', async ({ page }) => {
@@ -89,4 +104,36 @@ test('ended log streams retain output and errors until explicitly refreshed', as
   await page.getByRole('button', { name: 'Reload log snapshot' }).click();
   await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
   await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('machine workspace uses full width and preserves its tab when switching machines', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.goto('/');
+  await expect(page.locator('.machine-card')).toHaveCount(6);
+  await page.locator('.machine-card').filter({ hasText: 'worker-01' }).click();
+  const workspace = page.getByRole('region', { name: 'Machine workspace' });
+  await expect(workspace).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const bounds = await workspace.boundingBox();
+  expect(bounds!.width).toBeGreaterThan(1100);
+  await expect(page.locator('.machine-facts')).toContainText('running');
+  if (process.env.UPDATE_SCREENSHOTS) {
+    await page.screenshot({ path: 'docs/machine-workspace.png', fullPage: true });
+  }
+  await page.getByRole('tab', { name: 'Logs' }).click();
+  await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
+  const terminal = await page.locator('.terminal').boundingBox();
+  expect(terminal!.width).toBeGreaterThan(800);
+  await page
+    .getByRole('navigation', { name: 'Switch machine' })
+    .getByRole('button', { name: /control-02/ })
+    .click();
+  await expect(page.getByRole('heading', { name: 'control-02', exact: true })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Logs' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
+  await page.getByRole('tab', { name: 'Hardware' }).click();
+  await expect(page.locator('.hardware-sections section')).toHaveCount(4);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Back to fleet' }).click();
+  await expect(page.locator('.machine-card')).toHaveCount(6);
 });
