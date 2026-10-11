@@ -2003,3 +2003,276 @@ select {
     min-height: 20px;
   }
 }
+/* Machine diagnostics use one compact navigation layer and an actionable table. */
+.inspecting .breadcrumb {
+  display: none;
+}
+.inspecting .main {
+  padding-top: 24px;
+}
+.inspecting .page-header {
+  margin-bottom: 22px;
+  align-items: center;
+}
+.inspecting .page-header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+.inspecting .page-header p {
+  margin: 5px 0 0;
+}
+.machine-workspace {
+  display: block;
+}
+.machine-selector-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+}
+.machine-selector-bar > .small {
+  margin-left: auto;
+}
+.back-to-fleet {
+  width: auto;
+  margin: 0;
+  border: 0;
+  background: none;
+  padding-left: 0;
+}
+.machine-picker {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0 12px;
+}
+.machine-picker select {
+  background: none;
+  border: 0;
+  padding: 10px 0;
+  min-width: 180px;
+}
+.machine-content .workspace-toolbar {
+  justify-content: flex-end;
+  margin-bottom: 0;
+  height: 0;
+  position: relative;
+  top: 20px;
+}
+.workspace-toolbar .inspector-sub {
+  display: none;
+}
+.machine-content .tabs {
+  border: 0;
+  gap: 6px;
+  padding-right: 50px;
+  margin-bottom: 24px;
+}
+.machine-content .tabs button {
+  border: 0;
+  border-radius: 9px;
+  padding: 9px 18px;
+  background: var(--surface);
+  color: var(--muted);
+}
+.machine-content .tabs button.active {
+  color: var(--accent);
+  background: var(--tint);
+}
+.service-console {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.service-health-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--terminal);
+  border-bottom: 1px solid var(--line);
+  padding: 18px;
+  gap: 12px;
+}
+.health-summary {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--surface);
+  color: var(--muted);
+}
+.health-summary strong {
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--text);
+}
+.health-summary.healthy strong {
+  color: var(--good);
+}
+.health-summary.unhealthy strong {
+  color: #ed9679;
+}
+.health-summary.unknown strong {
+  color: var(--muted);
+}
+.health-summary[aria-pressed='true'] {
+  border-color: var(--accent);
+}
+.service-table-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+}
+.service-table-heading h2,
+.service-table-heading p {
+  margin: 0;
+}
+.service-table-heading p {
+  margin-top: 4px;
+}
+.service-table-heading .search {
+  max-width: 320px;
+  border-radius: 9px;
+}
+.service-table-scroll {
+  overflow: auto;
+}
+.service-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.service-table th {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 12px 24px;
+  background: var(--terminal);
+}
+.service-table .service-row {
+  display: table-row;
+  border: 0;
+}
+.service-table td {
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.service-table td:first-child {
+  min-width: 210px;
+}
+.service-table .service-icon {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 12px;
+  width: 28px;
+  height: 28px;
+  background: var(--soft);
+}
+.service-table .service-row strong {
+  margin: 0;
+  font-size: 13px;
+}
+.service-table td:last-child {
+  text-align: right;
+}
+.service-table td button {
+  border: 0;
+  background: none;
+  padding: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.process-state {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 12px;
+}
+.health-badge {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  background: var(--soft);
+  color: var(--muted);
+}
+.health-badge.healthy {
+  color: var(--good);
+  background: #51b6e618;
+}
+.health-badge.unhealthy {
+  color: #ed9679;
+  background: #ed967918;
+}
+.service-table-footer {
+  padding: 15px 24px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+@media (max-width: 600px) {
+  .machine-selector-bar {
+    flex-wrap: wrap;
+  }
+  .machine-selector-bar > .small {
+    margin-left: 0;
+    width: 100%;
+  }
+  .machine-picker {
+    max-width: 100%;
+  }
+  .machine-picker select {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .service-health-strip {
+    grid-template-columns: 1fr 1fr;
+    padding: 12px;
+    gap: 8px;
+  }
+  .health-summary {
+    padding: 10px;
+    font-size: 11px;
+  }
+  .service-table-heading {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 18px;
+  }
+  .service-table-heading .search {
+    max-width: none;
+  }
+  .service-table-footer {
+    flex-direction: column;
+    padding: 14px;
+  }
+  .machine-content .tabs {
+    gap: 4px;
+  }
+  .machine-content .tabs button {
+    padding: 8px 9px;
+    font-size: 12px;
+  }
+}
+.service-table td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.service-table tbody tr:hover {
+  background: var(--soft);
+}
+.service-table td button:hover {
+  color: var(--accent);
+}
