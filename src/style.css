@@ -1514,3 +1514,492 @@ pre {
     animation: none !important;
   }
 }
+/* Obsidian workspace: shared surfaces and controls across every view. */
+:root {
+  --bg: #090b0c;
+  --surface: #24292a;
+  --soft: #30383b;
+  --text: #f4f5f3;
+  --muted: #b0babe;
+  --line: #424c50;
+  --accent: #ff893d;
+  --accent-text: #301b0e;
+  --tint: #493021;
+  --good: #66c4ed;
+  --warn: #f2be77;
+  --terminal: #12191c;
+}
+:root[data-theme='light'] {
+  --bg: #eceeeb;
+  --surface: #fafbf8;
+  --soft: #e4e9e8;
+  --text: #172326;
+  --muted: #52676f;
+  --line: #ccd5d5;
+  --accent: #b94f0c;
+  --accent-text: #fff;
+  --tint: #fae6d5;
+  --good: #087da4;
+  --warn: #93600e;
+  --terminal: #edf2f1;
+}
+.app-shell {
+  display: block;
+  padding: 24px;
+  max-width: 1800px;
+  margin: auto;
+}
+.topbar {
+  position: relative;
+  top: auto;
+  padding: 0;
+  min-height: 52px;
+  height: auto;
+  border: 0;
+  background: none;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.brand {
+  padding: 9px 15px;
+  background: var(--surface);
+  border-radius: 50px;
+  font-size: 17px;
+}
+.brand-mark {
+  color: var(--accent);
+  background: none;
+  width: 24px;
+  height: 24px;
+}
+.topbar nav {
+  display: flex;
+  gap: 4px;
+  margin: auto;
+  padding: 5px;
+  border-radius: 50px;
+  background: var(--surface);
+}
+.topbar .nav-item {
+  width: auto;
+  border: 0;
+  padding: 9px 14px;
+  margin: 0;
+  border-radius: 50px;
+  font-size: 12px;
+}
+.topbar .nav-item svg,
+.nav-count,
+.preview-label {
+  display: none;
+}
+.topbar .nav-item.selected {
+  background: var(--text);
+  color: var(--bg);
+}
+.top-actions {
+  margin-left: 0;
+}
+.main {
+  margin: 0;
+  padding: 36px 0 0;
+  max-width: none;
+}
+.breadcrumb {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+h1 {
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -1px;
+}
+h2 {
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.3px;
+}
+button,
+.context-select,
+.pill,
+input,
+select {
+  border-radius: 50px;
+}
+.icon-button {
+  border-radius: 50%;
+}
+.header-actions > .icon-button {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+.panel,
+.metric-panel,
+.machine-card,
+.machine-switcher {
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--surface), var(--soft));
+}
+.panel {
+  padding: 22px;
+}
+.machine-card {
+  padding: 20px;
+}
+.code-editor,
+.terminal,
+.hardware-sections pre {
+  border-radius: 12px;
+}
+.review-dialog {
+  border-radius: 22px;
+  background: linear-gradient(130deg, var(--surface), var(--soft));
+}
+.overlay {
+  backdrop-filter: blur(6px);
+}
+.cluster-bento {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 0.9fr;
+  gap: 16px;
+  margin: 24px 0 32px;
+}
+.cluster-bento > * {
+  min-width: 0;
+  margin: 0;
+}
+.machine-focus {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  background: radial-gradient(ellipse at 50% 35%, #24627a55, transparent 65%), var(--surface);
+}
+.health-pulse {
+  background: radial-gradient(ellipse at 20% 10%, #80502833, transparent 70%), var(--surface);
+}
+.pulse-number {
+  font-size: 66px;
+  line-height: 1.15;
+  letter-spacing: -3px;
+  margin-top: 24px;
+}
+.pulse-number span {
+  color: var(--muted);
+  font-size: 28px;
+  letter-spacing: -1px;
+}
+.health-pulse > p {
+  margin: 8px 0 20px;
+}
+.readiness-track {
+  display: flex;
+  gap: 7px;
+}
+.readiness-track button {
+  flex: 1;
+  height: 12px;
+  min-height: 12px;
+  padding: 0;
+  border: 0;
+}
+.readiness-track .healthy {
+  background: var(--accent);
+}
+.readiness-track .attention {
+  background: var(--warn);
+}
+.pulse-facts {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 24px 0;
+}
+.pulse-facts span {
+  display: grid;
+  color: var(--muted);
+  font-size: 11px;
+}
+.pulse-facts strong {
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--text);
+}
+.matrix-scroll {
+  overflow: auto;
+  max-height: 265px;
+}
+.health-matrix {
+  width: 100%;
+  border-spacing: 5px;
+  font-size: 10px;
+}
+.health-matrix th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.health-cell {
+  display: block;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 5px;
+  border: 1px solid transparent;
+}
+.health-cell.healthy {
+  background: #51b6e6;
+}
+.health-cell.unhealthy {
+  background: #e57555;
+}
+.health-cell.unknown {
+  background: #596367;
+}
+.matrix-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.matrix-legend span {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.matrix-legend i {
+  width: 9px;
+  height: 9px;
+}
+.machine-focus select {
+  min-width: 0;
+  max-width: 55%;
+  background: var(--terminal);
+  padding: 8px;
+}
+.server-illustration {
+  height: 260px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse, #51b6e624, transparent 65%);
+}
+.server-chassis {
+  position: relative;
+  width: 120px;
+  height: 210px;
+  border-radius: 23px;
+  padding: 27px 15px 15px;
+  transform: rotate(-8deg) skewY(3deg);
+  background: linear-gradient(95deg, #626b6d, #bac1bf 10%, #343d3f 17%, #1c2427 83%, #879191 89%, #404a4d);
+  border: 2px solid #9aa6a8;
+  box-shadow:
+    9px 13px 22px #0008,
+    0 20px 28px #51b6e628;
+}
+.drive-bay {
+  height: 31px;
+  margin: 8px 0;
+  background: linear-gradient(#576065, #313b3e);
+  border: 1px solid #737d80;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px;
+}
+.drive-bay span {
+  width: 35px;
+  height: 3px;
+  background: #182125;
+}
+.drive-bay i {
+  width: 4px;
+  height: 4px;
+  background: #51b6e6;
+  box-shadow: 0 0 8px #51b6e6;
+}
+.power-light {
+  position: absolute;
+  top: 13px;
+  right: 22px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff893d;
+  box-shadow: 0 0 10px #ff893d;
+}
+.focus-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.focus-heading h2 {
+  font-size: 25px;
+}
+.focus-facts {
+  margin-top: 25px;
+}
+.focus-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.focus-facts dt {
+  color: var(--muted);
+}
+.focus-facts dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.topology-planes,
+.topology-branches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  justify-content: center;
+}
+.topology-planes {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+.topology-branches {
+  padding-top: 20px;
+}
+.topology-node {
+  position: relative;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--terminal);
+  font-size: 12px;
+}
+.topology-node small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+}
+.topology-node.active {
+  border-color: var(--accent);
+  background: var(--tint);
+}
+.topology-branches .topology-node:before {
+  content: '';
+  position: absolute;
+  height: 20px;
+  border-left: 1px solid var(--line);
+  top: -21px;
+  left: 50%;
+}
+.quick-workflows > svg {
+  color: var(--accent);
+}
+.quick-workflows h2 {
+  margin-top: 12px;
+}
+.quick-workflows > button {
+  margin: 12px 0;
+}
+@media (max-width: 1100px) {
+  .topbar nav {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+  .top-actions {
+    margin-left: auto;
+  }
+  .cluster-bento {
+    grid-template-columns: 1fr 1fr;
+  }
+  .machine-focus {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+  .server-illustration {
+    height: 220px;
+  }
+  .machine-focus {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 24px;
+  }
+  .machine-focus .section-header {
+    grid-column: 1 / -1;
+  }
+  .server-illustration {
+    grid-row: 2 / span 4;
+  }
+  .machine-focus .focus-facts {
+    margin: 0;
+  }
+}
+@media (max-width: 600px) {
+  .app-shell {
+    padding: 14px;
+  }
+  .main {
+    padding-top: 24px;
+  }
+  .topbar nav {
+    border-radius: 16px;
+    flex-wrap: wrap;
+  }
+  .topbar .nav-item {
+    padding: 9px 10px;
+  }
+  .topbar {
+    gap: 12px;
+  }
+  .bridge {
+    font-size: 10px;
+  }
+  .brand {
+    font-size: 14px;
+    padding: 8px;
+  }
+  .cluster-bento {
+    grid-template-columns: 1fr;
+  }
+  .machine-focus {
+    grid-column: auto;
+    display: block;
+  }
+  .server-illustration {
+    height: 240px;
+  }
+  .page-header {
+    flex-wrap: wrap;
+  }
+  .header-actions {
+    margin: 0;
+  }
+  h1 {
+    font-size: 27px;
+  }
+  .pulse-number {
+    font-size: 56px;
+  }
+  .panel {
+    padding: 18px;
+  }
+}
+@media (pointer: coarse) {
+  button,
+  select,
+  input {
+    min-height: 44px;
+  }
+  .health-cell {
+    min-height: 32px;
+    min-width: 32px;
+  }
+  .readiness-track button {
+    min-height: 20px;
+  }
+}

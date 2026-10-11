@@ -52,6 +52,7 @@ Demo mode uses clearly labeled sample data, disables writes, and provides log sn
 - Services with separate running, healthy, unhealthy, and unknown states.
 - System, processor, memory, and disk resources in the machine inspector.
 - Full-width machine workspace with a machine switcher, side-by-side health details, and a wide log view.
+- Obsidian dashboard with amber actions, blue health indicators, top navigation, a clickable cluster topology, and a service health matrix backed by machine inspections. Resource utilization and etcd quorum are not inferred from machine readiness.
 - Log snapshots and cancellable live streams for services reported by the machine.
 - YAML/JSON merge patches with a Talos dry run before applying in `no-reboot` mode.
 - Reviewed drain and reboot requests, with a control-plane majority check.
