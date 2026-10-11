@@ -138,7 +138,7 @@ export function App() {
     }
   };
   return (
-    <div className="app-shell">
+    <div className={'app-shell ' + (selected ? 'inspecting' : '')}>
       <header className="topbar">
         <a className="brand" href="/" aria-label="Talos Studio home">
           <span className="brand-mark">
@@ -150,8 +150,10 @@ export function App() {
           {pages.map((p) => (
             <button
               key={p.name}
-              aria-current={page === p.name ? 'page' : undefined}
-              className={'nav-item ' + (page === p.name ? 'selected' : '')}
+              aria-current={(selected ? p.name === 'Machines' : page === p.name) ? 'page' : undefined}
+              className={
+                'nav-item ' + ((selected ? p.name === 'Machines' : page === p.name) ? 'selected' : '')
+              }
               onClick={() => {
                 setSelected(undefined);
                 setPage(p.name);
@@ -541,38 +543,40 @@ function MachineWorkspace({
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [close, reviewing]);
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [serviceFilter, setServiceFilter] = useState('all');
+  const [logTarget, setLogTarget] = useState('');
   const healthy = data?.services.filter((s) => s.healthy === true).length || 0;
   const unknown = data?.services.filter((s) => s.healthy === null).length || 0;
   const unhealthy = data?.services.filter((s) => s.healthy === false).length || 0;
   return (
     <section className="machine-workspace" aria-label="Machine workspace">
-      <aside className="machine-switcher">
+      <div className="machine-selector-bar">
         <button className="back-to-fleet" onClick={close}>
           ← Back to fleet
         </button>
-        <div className="switcher-heading">
-          <span className="eyebrow">Machines</span>
-          <span className="muted small">{machines.length}</span>
-        </div>
-        <nav aria-label="Switch machine">
-          {machines.map((n) => (
-            <button
-              key={n.address}
-              className={'switch-machine ' + (n.address === machine.address ? 'active' : '')}
-              aria-current={n.address === machine.address ? 'page' : undefined}
-              onClick={() => select(n)}
-            >
-              <Server size={16} />
-              <span>
-                <strong>{n.name}</strong>
-                <small>{n.address}</small>
-              </span>
-              <span className={'dot ' + stateClass(n)} />
-            </button>
-          ))}
-        </nav>
-        <p className="muted small">Switch machines without closing your current view.</p>
-      </aside>
+        <label className="machine-picker">
+          <Server size={16} />
+          <select
+            aria-label="Switch machine"
+            value={machine.address}
+            onChange={(e) => {
+              const next = machines.find((n) => n.address === e.target.value);
+              if (next) {
+                setLogTarget('');
+                select(next);
+              }
+            }}
+          >
+            {machines.map((n) => (
+              <option key={n.address} value={n.address}>
+                {n.name} · {n.address}
+              </option>
+            ))}
+          </select>
+        </label>
+        <span className="muted small">{writes ? 'Reviewed writes enabled' : 'Read-only session'}</span>
+      </div>
       <div className="machine-content">
         <div className="workspace-toolbar">
           <div className="inspector-sub">
@@ -711,26 +715,131 @@ function MachineWorkspace({
                 </div>
               )}
               {tab === 'Services' && (
-                <div className="services-grid">
-                  {data.services.length === 0 && <p className="muted">Service status unavailable.</p>}
-                  {data.services.map((s) => (
-                    <div className="service-row" key={s.name}>
-                      <span className="service-icon">
-                        <Activity size={15} />
-                      </span>
-                      <strong>{s.name}</strong>
-                      <span className={'status ' + (s.healthy === true ? 'good' : 'warn')}>
-                        {!s.running
-                          ? 'Stopped'
-                          : s.healthy === true
-                            ? 'Healthy'
-                            : s.healthy === false
-                              ? 'Unhealthy'
-                              : 'Health unknown'}
-                      </span>
+                <section className="service-console">
+                  <div className="service-health-strip">
+                    {[
+                      ['all', 'All services', data.services.length],
+                      ['healthy', 'Healthy', healthy],
+                      ['unhealthy', 'Unhealthy', unhealthy],
+                      ['unknown', 'Unknown', unknown],
+                    ].map(([value, label, count]) => (
+                      <button
+                        key={value}
+                        className={'health-summary ' + value}
+                        aria-pressed={serviceFilter === value}
+                        onClick={() => setServiceFilter(String(value))}
+                      >
+                        <span>{label}</span>
+                        <strong>{count}</strong>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="service-table-heading">
+                    <div>
+                      <h2>System services</h2>
+                      <p className="muted small">Inspect health and open a service’s logs.</p>
                     </div>
-                  ))}
-                </div>
+                    <label className="search">
+                      <Search size={16} />
+                      <input
+                        aria-label="Search services"
+                        placeholder="Search services…"
+                        value={serviceSearch}
+                        onChange={(e) => setServiceSearch(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <div className="service-table-scroll">
+                    <table className="service-table">
+                      <thead>
+                        <tr>
+                          <th>Service</th>
+                          <th>Process</th>
+                          <th>Health check</th>
+                          <th>
+                            <span className="muted">Diagnostics</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.services
+                          .filter(
+                            (s) =>
+                              s.name.toLowerCase().includes(serviceSearch.toLowerCase()) &&
+                              (serviceFilter === 'all' ||
+                                (serviceFilter === 'healthy'
+                                  ? s.healthy === true
+                                  : serviceFilter === 'unhealthy'
+                                    ? s.healthy === false
+                                    : s.healthy === null)),
+                          )
+                          .map((s) => (
+                            <tr className="service-row" key={s.name}>
+                              <td>
+                                <span className="service-icon">
+                                  <Activity size={15} />
+                                </span>
+                                <strong>{s.name}</strong>
+                              </td>
+                              <td>
+                                <span className={'process-state ' + (s.running ? 'good' : 'warn')}>
+                                  <span className="dot" />
+                                  {s.running ? 'Running' : 'Stopped'}
+                                </span>
+                              </td>
+                              <td>
+                                <span
+                                  className={
+                                    'health-badge ' +
+                                    (s.healthy === true
+                                      ? 'healthy'
+                                      : s.healthy === false
+                                        ? 'unhealthy'
+                                        : 'unknown')
+                                  }
+                                >
+                                  {s.healthy === true
+                                    ? 'Healthy'
+                                    : s.healthy === false
+                                      ? 'Unhealthy'
+                                      : 'Unknown'}
+                                </span>
+                              </td>
+                              <td>
+                                <button
+                                  aria-label={'View ' + s.name + ' logs'}
+                                  onClick={() => {
+                                    setLogTarget(s.name);
+                                    setTab('Logs');
+                                  }}
+                                >
+                                  View logs <ArrowRight size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {!data.services.some(
+                    (s) =>
+                      s.name.toLowerCase().includes(serviceSearch.toLowerCase()) &&
+                      (serviceFilter === 'all' ||
+                        (serviceFilter === 'healthy'
+                          ? s.healthy === true
+                          : serviceFilter === 'unhealthy'
+                            ? s.healthy === false
+                            : s.healthy === null)),
+                  ) && (
+                    <div className="empty">
+                      <p>No services match this view.</p>
+                    </div>
+                  )}
+                  <div className="service-table-footer">
+                    <span>Unknown means no definitive health result.</span>
+                    <span>Checked {time(data.machine.checkedAt)}</span>
+                  </div>
+                </section>
               )}
               {tab === 'Hardware' && (
                 <div className="hardware-sections">
@@ -762,7 +871,8 @@ function MachineWorkspace({
               )}
               {tab === 'Logs' && (
                 <Logs
-                  key={machine.address}
+                  key={machine.address + logTarget}
+                  initialService={logTarget}
                   context={context}
                   node={machine.address}
                   services={data.services.map((s) => s.name)}
@@ -777,6 +887,7 @@ function MachineWorkspace({
   );
 }
 function Logs({
+  initialService,
   context,
   node,
   services,
@@ -785,9 +896,16 @@ function Logs({
   context: string;
   node: string;
   services: string[];
+  initialService?: string;
   demo: boolean;
 }) {
-  const [service, setService] = useState(services.includes('kubelet') ? 'kubelet' : services[0] || ''),
+  const [service, setService] = useState(
+      initialService && services.includes(initialService)
+        ? initialService
+        : services.includes('kubelet')
+          ? 'kubelet'
+          : services[0] || '',
+    ),
     [text, setText] = useState(''),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),

@@ -124,10 +124,7 @@ test('machine workspace uses full width and preserves its tab when switching mac
   await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
   const terminal = await page.locator('.terminal').boundingBox();
   expect(terminal!.width).toBeGreaterThan(800);
-  await page
-    .getByRole('navigation', { name: 'Switch machine' })
-    .getByRole('button', { name: /control-02/ })
-    .click();
+  await page.getByRole('combobox', { name: 'Switch machine' }).selectOption('192.0.2.12');
   await expect(page.getByRole('heading', { name: 'control-02', exact: true })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Logs' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
@@ -151,4 +148,15 @@ test('dashboard topology, health matrix and responsive navigation', async ({ pag
   }
   await page.locator('.machine-focus').getByRole('button', { name: 'Inspect' }).click();
   await expect(page.getByRole('region', { name: 'Machine workspace' })).toBeVisible();
+});
+
+test('services search, health filters and direct log action', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.machine-card').filter({ hasText: 'worker-01' }).click();
+  await page.getByRole('tab', { name: 'Services' }).click();
+  await page.getByRole('textbox', { name: 'Search services' }).fill('containerd');
+  await expect(page.locator('.service-row')).toHaveCount(1);
+  await page.getByRole('button', { name: 'View containerd logs' }).click();
+  await expect(page.getByRole('combobox', { name: 'Log service' })).toHaveValue('containerd');
+  await expect(page.locator('.terminal pre')).toContainText('Demo containerd logs');
 });
