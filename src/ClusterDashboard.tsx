@@ -1,3 +1,4 @@
+import { ResourcePicker } from './ResourcePicker.tsx';
 import { useEffect, useState } from 'react';
 import { ArrowRight, Server, Activity } from 'lucide-react';
 import type { Inspector, Machine } from '../shared/types.ts';
@@ -162,37 +163,32 @@ export function ClusterDashboard({
       </article>
       <article className="panel machine-focus">
         <div className="section-header">
-          <select
-            aria-label="Dashboard machine"
+          <ResourcePicker
+            label="Dashboard machine"
             value={machine?.address || ''}
-            onChange={(e) => setAddress(e.target.value)}
-          >
-            {machines.map((n) => (
-              <option key={n.address} value={n.address}>
-                {n.name}
-              </option>
-            ))}
-          </select>
+            options={machines.map((n) => ({ value: n.address, name: n.name }))}
+            onChange={setAddress}
+          />
           <button className="primary" disabled={!machine} onClick={() => machine && inspect(machine)}>
             Inspect <ArrowRight size={14} />
           </button>
         </div>
-        <div className="server-illustration" role="img" aria-label="Illustrative server chassis">
-          <div className="server-chassis">
-            <i className="power-light" />
-            {[0, 1, 2, 3].map((i) => (
-              <div className="drive-bay" key={i}>
-                <span />
-                <i />
-              </div>
-            ))}
-            <div className="server-vents" />
-          </div>
+        <div className="focus-readings">
+          <Server size={34} />
+          <span>Selected machine</span>
+          <strong>
+            {readings[machine?.address || '']?.services.filter((s) => s.healthy === true).length ?? '—'}
+            <small>healthy services</small>
+          </strong>
         </div>
         <div className="focus-heading">
           <h2>{machine?.name || 'No machine selected'}</h2>
           <span className={'status ' + (machine?.ready === true && machine.reachable ? 'good' : 'warn')}>
-            {machine?.ready === true && machine.reachable ? 'Ready' : 'Needs attention'}
+            {!machine
+              ? 'Awaiting discovery'
+              : machine.ready === true && machine.reachable
+                ? 'Ready'
+                : 'Needs attention'}
           </span>
         </div>
         <p className="muted mono">{machine?.address || 'Awaiting discovery'}</p>
@@ -228,7 +224,7 @@ export function ClusterDashboard({
       </article>
       <article className="panel quick-workflows">
         <Activity size={20} />
-        <h2>Operate with confidence</h2>
+        <h2>Next actions</h2>
         <p className="muted">Inspect services and logs, then review a targeted change.</p>
         <button onClick={configure}>
           Review configuration <ArrowRight size={15} />

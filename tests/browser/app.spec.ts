@@ -8,14 +8,16 @@ test('fleet, inspector, logs, configuration review and context switching', async
   await page.getByRole('tab', { name: 'Services' }).click();
   await expect(page.locator('.service-row')).toHaveCount(3);
   await page.getByRole('tab', { name: 'Logs' }).click();
-  await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
-  await page.getByRole('combobox', { name: 'Log service' }).selectOption('containerd');
-  await expect(page.locator('.terminal pre')).toContainText('Demo containerd logs');
+  await expect(page.locator('.log-output')).toContainText('Demo kubelet logs');
+  await page.getByRole('button', { name: 'Log service', exact: true }).click();
+  await page.getByRole('option', { name: 'containerd', exact: true }).click();
+  await expect(page.locator('.log-output')).toContainText('Demo containerd logs');
   await page.getByRole('tab', { name: 'Hardware' }).click();
   await page.locator('.hardware-sections details').first().locator('summary').click();
   await expect(page.locator('.hardware-sections pre').first()).toContainText('Example hardware');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Configuration', exact: true }).click();
+  await page.getByRole('button', { name: 'Advanced patch', exact: true }).click();
   await page
     .getByRole('textbox', { name: 'Merge patch' })
     .fill('machine:\n  kubelet:\n    extraArgs: {max-pods: "120"}');
@@ -24,11 +26,13 @@ test('fleet, inspector, logs, configuration review and context switching', async
   await expect(page.getByRole('dialog')).toContainText('Read-only session');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Overview', exact: true }).click();
-  await page.getByRole('combobox', { name: 'Talos context' }).selectOption('staging');
+  await page.getByRole('button', { name: 'Talos context', exact: true }).click();
+  await page.getByRole('option', { name: 'staging', exact: true }).click();
   await expect(page.locator('.machine-card')).toHaveCount(3);
   await page.getByRole('button', { name: 'List view' }).click();
   await expect(page.locator('.machine-grid')).toHaveClass(/list-view/);
-  await page.getByRole('combobox', { name: 'Talos context' }).selectOption('homelab');
+  await page.getByRole('button', { name: 'Talos context', exact: true }).click();
+  await page.getByRole('option', { name: 'homelab', exact: true }).click();
   await expect(page.locator('.machine-card')).toHaveCount(6);
   await page.getByRole('button', { name: 'Card view' }).click();
   await page.getByRole('textbox', { name: 'Search machines' }).fill('worker-03');
@@ -69,7 +73,7 @@ test('mobile layout, theme and keyboard dialog controls', async ({ page }) => {
     await expect(page.locator('.hardware-sections section')).toHaveCount(4);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.getByRole('tab', { name: 'Logs' }).click();
-    await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
+    await expect(page.locator('.log-output')).toContainText('Demo kubelet logs');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   await page.keyboard.press('Escape');
@@ -96,13 +100,13 @@ test('ended log streams retain output and errors until explicitly refreshed', as
   await expect(page.locator('.machine-card')).toHaveCount(6);
   await page.locator('.machine-card').filter({ hasText: 'worker-01' }).click();
   await page.getByRole('tab', { name: 'Logs' }).click();
-  await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
+  await expect(page.locator('.log-output')).toContainText('Demo kubelet logs');
   await page.getByRole('button', { name: 'Follow live', exact: true }).click();
-  await expect(page.locator('.terminal pre')).toContainText('live stream output');
+  await expect(page.locator('.log-output')).toContainText('live stream output');
   await expect(page.locator('.terminal-header')).toContainText('STOPPED');
   await expect(page.getByRole('alert')).toContainText('Stream limit reached');
   await page.getByRole('button', { name: 'Reload log snapshot' }).click();
-  await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
+  await expect(page.locator('.log-output')).toContainText('Demo kubelet logs');
   await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
@@ -121,14 +125,14 @@ test('machine workspace uses full width and preserves its tab when switching mac
     await page.screenshot({ path: 'docs/machine-workspace.png', fullPage: true });
   }
   await page.getByRole('tab', { name: 'Logs' }).click();
-  await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
+  await expect(page.locator('.log-output')).toContainText('Demo kubelet logs');
   const terminal = await page.locator('.terminal').boundingBox();
   expect(terminal!.width).toBeGreaterThan(800);
   await page.getByRole('button', { name: 'Switch machine', exact: true }).click();
   await page.getByRole('option', { name: /control-02/ }).click();
   await expect(page.getByRole('heading', { name: 'control-02', exact: true })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Logs' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
+  await expect(page.locator('.log-output')).toContainText('Demo kubelet logs');
   await page.getByRole('tab', { name: 'Hardware' }).click();
   await expect(page.locator('.hardware-sections section')).toHaveCount(4);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -141,7 +145,9 @@ test('dashboard topology, health matrix and responsive navigation', async ({ pag
   await expect(page.getByRole('region', { name: 'Cluster dashboard' })).toBeVisible();
   await expect(page.locator('.health-cell.healthy').first()).toBeVisible();
   await page.locator('.topology-node').filter({ hasText: 'worker-01' }).click();
-  await expect(page.getByRole('combobox', { name: 'Dashboard machine' })).toHaveValue('192.0.2.14');
+  await expect(page.getByRole('button', { name: 'Dashboard machine', exact: true })).toContainText(
+    'worker-01',
+  );
   await expect(page.locator('.machine-focus h2')).toHaveText('worker-01');
   for (const width of [320, 600, 900, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -158,8 +164,8 @@ test('services search, health filters and direct log action', async ({ page }) =
   await page.getByRole('textbox', { name: 'Search services' }).fill('containerd');
   await expect(page.locator('.service-row')).toHaveCount(1);
   await page.getByRole('button', { name: 'View containerd logs' }).click();
-  await expect(page.getByRole('combobox', { name: 'Log service' })).toHaveValue('containerd');
-  await expect(page.locator('.terminal pre')).toContainText('Demo containerd logs');
+  await expect(page.getByRole('button', { name: 'Log service', exact: true })).toContainText('containerd');
+  await expect(page.locator('.log-output')).toContainText('Demo containerd logs');
 });
 
 test('searchable picker and readable hardware summaries', async ({ page }) => {
@@ -184,4 +190,40 @@ test('searchable picker and readable hardware summaries', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(page.locator('.picker-popover')).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Machine workspace' })).toBeVisible();
+});
+
+test('readable log search, severity and raw toggle preserve data', async ({ page }) => {
+  await page.route('**/api/logs?*', (r) =>
+    r.fulfill({
+      json: {
+        text:
+          'node: ' +
+          JSON.stringify({ ts: 1700000000, level: 'error', msg: 'connection failed' }) +
+          '\nnode: ' +
+          JSON.stringify({ ts: 1700000001, level: 'info', msg: 'connected' }) +
+          '\n',
+      },
+    }),
+  );
+  await page.goto('/');
+  await page.locator('.machine-card').first().click();
+  await page.getByRole('tab', { name: 'Logs' }).click();
+  await expect(page.locator('.log-record')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Log severity', exact: true }).click();
+  await page.getByRole('option', { name: 'Errors', exact: true }).click();
+  await expect(page.locator('.log-record')).toHaveCount(1);
+  await page.getByRole('textbox', { name: 'Search logs' }).fill('missing');
+  await expect(page.locator('.log-output')).toContainText('No messages match');
+  await page.getByRole('textbox', { name: 'Search logs' }).fill('');
+  await page.getByRole('button', { name: 'Show raw output' }).click();
+  await expect(page.locator('.log-output')).toContainText('"msg"');
+});
+test('guided configuration generates the exact reviewed pod-capacity patch', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Configuration', exact: true }).click();
+  await page.getByRole('spinbutton', { name: 'Maximum pods' }).fill('125');
+  await page.getByRole('button', { name: 'Use this setting' }).click();
+  await expect(page.getByRole('textbox', { name: 'Merge patch' })).toHaveValue(/125/);
+  await page.getByRole('button', { name: 'Review patch', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('125');
 });

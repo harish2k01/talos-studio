@@ -52,6 +52,8 @@ Demo mode uses clearly labeled sample data, disables writes, and provides log sn
 - Services with separate running, healthy, unhealthy, and unknown states.
 - System, processor, memory, and disk resources in the machine inspector.
 - Full-width machine workspace with a compact machine selector, side-by-side health details, and a wide log view.
+- Readable log messages with timestamps, severity filters, text search, and preserved raw output. Context, machine, service, and filter pickers support searchable selection.
+- Guided pod-capacity changes plus an advanced YAML/JSON editor, both using Talos dry-run review. Hardware summaries show cores, installed memory, and disks with virtual devices separated.
 - Searchable service table with health filters, separate process and health states, and direct service log actions.
 - Obsidian dashboard with amber actions, blue health indicators, top navigation, a clickable cluster topology, and a service health matrix backed by machine inspections. Resource utilization and etcd quorum are not inferred from machine readiness.
 - Log snapshots and cancellable live streams for services reported by the machine.

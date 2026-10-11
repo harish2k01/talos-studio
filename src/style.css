@@ -2572,3 +2572,333 @@ summary {
   margin-top: 12px;
   padding-top: 18px;
 }
+/* Workflow layout: concise navigation, readable diagnostics and focused actions. */
+.inspecting .header-actions > .icon-button {
+  display: none;
+}
+.inspecting .page-header {
+  margin-bottom: 12px;
+}
+.machine-selector-bar {
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+.machine-selector-bar .resource-picker {
+  min-width: 210px;
+}
+.machine-content .tabs {
+  display: flex;
+  align-items: center;
+  padding-right: 0;
+  margin-bottom: 18px;
+}
+.machine-content .tabs .inspection-refresh {
+  margin-left: auto;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+.hardware-glance {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.hardware-glance > div {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 17px;
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 8px 12px;
+  align-items: center;
+}
+.hardware-glance svg {
+  color: var(--good);
+}
+.hardware-glance strong {
+  font-size: 26px;
+  font-weight: 500;
+}
+.hardware-glance span {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 11px;
+}
+.hardware-cards .hardware-card {
+  padding: 18px;
+}
+.hardware-card header {
+  margin-bottom: 10px;
+}
+.hardware-resource h4 {
+  font-size: 13px;
+}
+.hardware-resource dl div {
+  padding: 6px 0;
+}
+.hardware-cards {
+  gap: 14px;
+}
+.hardware-resource {
+  padding: 8px 0;
+}
+.hardware-cards details {
+  margin-top: 10px;
+}
+.log-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+.log-tools .resource-picker {
+  min-width: 160px;
+  max-width: 210px;
+}
+.log-tools .log-search {
+  flex: 1;
+  min-width: 190px;
+  border-radius: 9px;
+}
+.log-tools .picker-trigger {
+  min-height: 38px;
+}
+.log-tools > button {
+  border-radius: 8px;
+}
+.log-output {
+  max-height: 60vh;
+  min-height: 320px;
+  overflow: auto;
+  background: var(--terminal);
+  font-family: ui-monospace, monospace;
+}
+.log-record {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 8px 14px;
+  border-bottom: 1px solid #ffffff08;
+  font-size: 11px;
+}
+.log-record:hover {
+  background: var(--soft);
+}
+.log-record time {
+  flex: 0 0 82px;
+  color: var(--muted);
+}
+.log-level {
+  flex: 0 0 48px;
+  text-transform: uppercase;
+  color: var(--good);
+  font-size: 10px;
+}
+.log-record.error .log-level,
+.log-record.fatal .log-level {
+  color: #ed9679;
+}
+.log-record.warn .log-level,
+.log-record.warning .log-level {
+  color: var(--warn);
+}
+.machine-content .terminal .log-record pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  max-height: none;
+  border: 0;
+  background: none;
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.log-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+}
+.log-status button {
+  background: none;
+  border: 0;
+  font-size: 11px;
+  padding: 5px;
+}
+.log-empty {
+  padding: 24px;
+  color: var(--muted);
+}
+.config-mode {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 20px;
+}
+.config-mode button {
+  border-radius: 8px;
+}
+.config-mode button[aria-pressed='true'] {
+  background: var(--tint);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.guided-setting {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--terminal);
+  margin-bottom: 20px;
+}
+.guided-setting > div {
+  flex: 1;
+}
+.guided-setting h3 {
+  margin: 0 0 5px;
+}
+.guided-setting p {
+  margin: 0;
+  font-size: 12px;
+  max-width: 600px;
+}
+.guided-setting label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+.guided-setting input {
+  width: 100px;
+  border-radius: 8px;
+  padding: 9px;
+  background: var(--surface);
+}
+.guided-preview .configuration-editor {
+  opacity: 0.8;
+}
+.configuration-editor .code-editor {
+  min-height: 260px;
+}
+.configuration-guide {
+  padding: 18px;
+}
+.configuration-guide li {
+  margin-bottom: 15px;
+}
+@media (max-width: 700px) {
+  .hardware-glance {
+    grid-template-columns: 1fr 1fr;
+  }
+  .hardware-glance strong {
+    font-size: 22px;
+  }
+  .guided-setting {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .machine-content .tabs {
+    flex-wrap: wrap;
+  }
+  .machine-content .tabs .inspection-refresh {
+    margin-left: 0;
+  }
+  .log-record {
+    gap: 8px;
+    padding: 8px;
+  }
+  .log-record time {
+    flex-basis: 62px;
+    font-size: 9px;
+  }
+  .log-level {
+    flex-basis: 35px;
+    font-size: 9px;
+  }
+  .log-tools .resource-picker {
+    max-width: none;
+    flex: 1;
+  }
+  .log-tools .log-search {
+    flex-basis: 100%;
+    order: 3;
+  }
+}
+.header-actions > .resource-picker {
+  min-width: 150px;
+  max-width: 180px;
+}
+.fleet-tools > .resource-picker {
+  min-width: 170px;
+}
+.machine-focus .resource-picker {
+  min-width: 0;
+  max-width: 55%;
+  flex: 1;
+}
+.focus-readings {
+  display: grid;
+  place-items: center;
+  gap: 14px;
+  padding: 28px 0;
+  color: var(--good);
+}
+.focus-readings > span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.focus-readings strong {
+  font-size: 56px;
+  font-weight: 500;
+  color: var(--text);
+  text-align: center;
+}
+.focus-readings small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.machine-focus {
+  background: radial-gradient(ellipse at 50% 20%, #24627a22, transparent 65%), var(--surface);
+}
+@media (max-width: 1100px) {
+  .focus-readings {
+    grid-row: 2 / span 4;
+  }
+}
+@media (max-width: 600px) {
+  .header-actions > .resource-picker {
+    min-width: 140px;
+  }
+  .focus-readings {
+    padding: 15px;
+  }
+}
+.guided-preview .configuration-editor {
+  display: none;
+}
+.configuration-workflow.guided-preview {
+  display: block;
+}
+.guided-preview .configuration-guide ol {
+  display: flex;
+  gap: 28px;
+}
+.guided-preview .configuration-guide .configuration-target {
+  display: none;
+}
+@media (max-width: 700px) {
+  .guided-preview .configuration-guide ol {
+    display: block;
+  }
+}

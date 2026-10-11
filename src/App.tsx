@@ -1,3 +1,4 @@
+import { parseLogs } from './log-records.ts';
 import { ResourcePicker } from './ResourcePicker.tsx';
 import { HardwareView } from './HardwareView.tsx';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -207,18 +208,12 @@ export function App() {
           </div>
           <div className="header-actions">
             {connection && (
-              <label className="context-select">
-                <Hexagon size={15} />
-                <select
-                  aria-label="Talos context"
-                  value={context}
-                  onChange={(e) => setContext(e.target.value)}
-                >
-                  {connection.contexts.map((c) => (
-                    <option key={c.name}>{c.name}</option>
-                  ))}
-                </select>
-              </label>
+              <ResourcePicker
+                label="Talos context"
+                value={context}
+                options={connection.contexts.map((c) => ({ value: c.name, name: c.name }))}
+                onChange={setContext}
+              />
             )}
             <button
               className="icon-button"
@@ -300,12 +295,17 @@ export function App() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </label>
-              <select aria-label="Filter machines" value={filter} onChange={(e) => setFilter(e.target.value)}>
-                <option value="all">All machines</option>
-                <option value="controlplane">Control plane</option>
-                <option value="worker">Workers</option>
-                <option value="attention">Needs attention</option>
-              </select>
+              <ResourcePicker
+                label="Filter machines"
+                value={filter}
+                options={[
+                  { value: 'all', name: 'All machines' },
+                  { value: 'controlplane', name: 'Control plane' },
+                  { value: 'worker', name: 'Workers' },
+                  { value: 'attention', name: 'Needs attention' },
+                ]}
+                onChange={setFilter}
+              />
             </div>
             <div className={'machine-grid ' + (view === 'list' ? 'list-view' : '')}>
               {visible.map((n) => (
@@ -572,25 +572,6 @@ function MachineWorkspace({
         <span className="muted small">{writes ? 'Reviewed writes enabled' : 'Read-only session'}</span>
       </div>
       <div className="machine-content">
-        <div className="workspace-toolbar">
-          <div className="inspector-sub">
-            <span className={'status ' + stateClass(machine)}>
-              <span className="dot" />
-              {status(machine)}
-            </span>
-            <span className="muted">
-              {role(machine.role)} · {machine.address}
-            </span>
-          </div>
-          <button
-            className="icon-button"
-            aria-label="Refresh machine inspection"
-            disabled={loading}
-            onClick={() => setNonce((n) => n + 1)}
-          >
-            <RefreshCw size={16} className={loading ? 'spin' : ''} />
-          </button>
-        </div>
         <div className="tabs" role="tablist" aria-label="Machine details">
           {['Overview', 'Services', 'Logs', 'Hardware'].map((t) => (
             <button
@@ -605,6 +586,14 @@ function MachineWorkspace({
               {t}
             </button>
           ))}
+          <button
+            className="inspection-refresh"
+            aria-label="Refresh machine inspection"
+            disabled={loading}
+            onClick={() => setNonce((n) => n + 1)}
+          >
+            <RefreshCw size={14} className={loading ? 'spin' : ''} /> Update readings
+          </button>
         </div>
         <div id="machine-tab-content" role="tabpanel" aria-labelledby={'tab-' + tab}>
           {loading && (
@@ -879,6 +868,17 @@ function Logs({
     [following, setFollowing] = useState(false),
     [streamed, setStreamed] = useState(false),
     [nonce, setNonce] = useState(0);
+  const [logSearch, setLogSearch] = useState(''),
+    [severity, setSeverity] = useState('all'),
+    [raw, setRaw] = useState(false);
+  const records = parseLogs(text).filter(
+    (r) =>
+      (severity === 'all' ||
+        (severity === 'error'
+          ? ['error', 'fatal'].includes(r.level)
+          : ['warn', 'warning'].includes(r.level))) &&
+      (raw ? r.raw : r.message).toLowerCase().includes(logSearch.toLowerCase()),
+  );
   const active = useRef<AbortController | null>(null);
   useEffect(() => {
     if (!service) return;
@@ -938,18 +938,34 @@ function Logs({
   return (
     <>
       <div className="log-tools">
-        <select
-          aria-label="Log service"
+        <ResourcePicker
+          label="Log service"
           value={service}
-          onChange={(e) => {
+          options={services.map((name) => ({ value: name, name }))}
+          onChange={(value) => {
             setFollowing(false);
-            setService(e.target.value);
+            setService(value);
           }}
-        >
-          {services.map((s) => (
-            <option key={s}>{s}</option>
-          ))}
-        </select>
+        />
+        <label className="search log-search">
+          <Search size={15} />
+          <input
+            aria-label="Search logs"
+            placeholder="Search messages…"
+            value={logSearch}
+            onChange={(e) => setLogSearch(e.target.value)}
+          />
+        </label>
+        <ResourcePicker
+          label="Log severity"
+          value={severity}
+          options={[
+            { value: 'all', name: 'All levels' },
+            { value: 'error', name: 'Errors' },
+            { value: 'warn', name: 'Warnings' },
+          ]}
+          onChange={setSeverity}
+        />
         <button disabled={demo} aria-pressed={following} onClick={toggleFollow}>
           {following ? 'Stop following' : 'Follow live'}
         </button>
@@ -963,7 +979,34 @@ function Logs({
           {service}
           <span>{following ? 'LIVE' : streamed ? 'STOPPED' : 'SNAPSHOT'}</span>
         </div>
-        <pre>{text || (busy ? 'Waiting for logs…' : 'No logs returned.')}</pre>
+        <div className="log-output" role="region" aria-label="Log output">
+          {records.map((r, i) => (
+            <div className={'log-record ' + r.level} key={i}>
+              {!raw && (
+                <>
+                  <time>{r.time || '—'}</time>
+                  <span className="log-level">{r.level}</span>
+                </>
+              )}
+              <pre>{raw ? r.raw : r.message}</pre>
+            </div>
+          ))}
+          {!records.length && (
+            <p className="log-empty">
+              {busy && !text
+                ? 'Reading logs…'
+                : text
+                  ? 'No messages match your filters.'
+                  : 'No logs returned.'}
+            </p>
+          )}
+        </div>
+        <div className="log-status">
+          <span>{records.length} messages shown</span>
+          <button aria-pressed={raw} onClick={() => setRaw(!raw)}>
+            {raw ? 'Show readable messages' : 'Show raw output'}
+          </button>
+        </div>
       </div>
       {error && (
         <div className="inline-error" role="alert">
@@ -991,6 +1034,8 @@ function Configuration({
   const [node, setNode] = useState(''),
     [patch, setPatch] = useState('machine:\n  kubelet:\n    extraArgs:\n      max-pods: "110"\n'),
     [busy, setBusy] = useState(false);
+  const [configMode, setConfigMode] = useState('guided'),
+    [maxPods, setMaxPods] = useState('110');
   const epoch = useRef(0);
   useEffect(() => {
     epoch.current++;
@@ -1030,7 +1075,58 @@ function Configuration({
         options={machines.map((n) => ({ value: n.address, name: n.name, detail: n.address }))}
         onChange={setNode}
       />
-      <div className="configuration-workflow">
+      <div className="config-mode">
+        <button
+          aria-pressed={configMode === 'guided'}
+          onClick={() => {
+            setConfigMode('guided');
+            setPatch('machine:\n  kubelet:\n    extraArgs:\n      max-pods: \"' + maxPods + '\"\n');
+          }}
+        >
+          Common settings
+        </button>
+        <button aria-pressed={configMode === 'advanced'} onClick={() => setConfigMode('advanced')}>
+          Advanced patch
+        </button>
+      </div>
+      {configMode === 'guided' && (
+        <div className="guided-setting">
+          <div>
+            <h3>Pod capacity</h3>
+            <p className="muted">
+              Set the maximum pods allowed by kubelet on this machine. This is a proposed value, not a reading
+              of the current setting.
+            </p>
+          </div>
+          <label>
+            Maximum pods
+            <input
+              aria-label="Maximum pods"
+              type="number"
+              min="1"
+              max="10000"
+              value={maxPods}
+              onChange={(e) => {
+                setMaxPods(e.target.value);
+                if (/^\d+$/.test(e.target.value))
+                  setPatch(
+                    'machine:\n  kubelet:\n    extraArgs:\n      max-pods: "' + e.target.value + '"\n',
+                  );
+              }}
+            />
+          </label>
+          <button
+            onClick={() => {
+              setPatch('machine:\n  kubelet:\n    extraArgs:\n      max-pods: "' + maxPods + '"\n');
+              setConfigMode('advanced');
+            }}
+            disabled={!/^\d+$/.test(maxPods) || Number(maxPods) < 1 || Number(maxPods) > 10000}
+          >
+            Use this setting <ArrowRight size={14} />
+          </button>
+        </div>
+      )}
+      <div className={'configuration-workflow ' + (configMode === 'guided' ? 'guided-preview' : '')}>
         <div className="configuration-editor">
           <div className="editor-label">
             <label htmlFor="patch">Merge patch</label>
@@ -1074,7 +1170,14 @@ function Configuration({
         </div>
         <button
           className="primary"
-          disabled={busy || !target?.reachable || target.ready !== true || !patch.trim()}
+          disabled={
+            busy ||
+            !target?.reachable ||
+            target.ready !== true ||
+            !patch.trim() ||
+            (configMode === 'guided' &&
+              (!/^\d+$/.test(maxPods) || Number(maxPods) < 1 || Number(maxPods) > 10000))
+          }
           onClick={() => void review()}
         >
           {busy ? <LoaderCircle className="spin" size={16} /> : <FileCode2 size={16} />}
