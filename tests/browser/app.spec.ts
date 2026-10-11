@@ -124,7 +124,8 @@ test('machine workspace uses full width and preserves its tab when switching mac
   await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
   const terminal = await page.locator('.terminal').boundingBox();
   expect(terminal!.width).toBeGreaterThan(800);
-  await page.getByRole('combobox', { name: 'Switch machine' }).selectOption('192.0.2.12');
+  await page.getByRole('button', { name: 'Switch machine', exact: true }).click();
+  await page.getByRole('option', { name: /control-02/ }).click();
   await expect(page.getByRole('heading', { name: 'control-02', exact: true })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Logs' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
@@ -159,4 +160,28 @@ test('services search, health filters and direct log action', async ({ page }) =
   await page.getByRole('button', { name: 'View containerd logs' }).click();
   await expect(page.getByRole('combobox', { name: 'Log service' })).toHaveValue('containerd');
   await expect(page.locator('.terminal pre')).toContainText('Demo containerd logs');
+});
+
+test('searchable picker and readable hardware summaries', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.machine-card').first().click();
+  await page.getByRole('button', { name: 'Switch machine', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Search switch machine' }).fill('worker-01');
+  await expect(page.locator('.picker-popover').getByRole('option')).toHaveCount(1);
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'worker-01', exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'Hardware' }).click();
+  await expect(page.locator('.hardware-card')).toHaveCount(4);
+  await expect(page.locator('.hardware-resource')).toContainText([
+    'Example hardware',
+    '8',
+    '32 GiB',
+    'Demo NVMe',
+  ]);
+  await expect(page.locator('.hardware-card pre').first()).not.toBeVisible();
+  await page.getByRole('button', { name: 'Switch machine', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.picker-popover')).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Machine workspace' })).toBeVisible();
 });
