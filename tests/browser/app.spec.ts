@@ -60,3 +60,33 @@ test('mobile layout, theme and keyboard dialog controls', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
+
+test('ended log streams retain output and errors until explicitly refreshed', async ({ page }) => {
+  await page.route('**/api/connection', async (route) => {
+    const response = await route.fetch();
+    const connection = await response.json();
+    await route.fulfill({ response, json: { ...connection, demo: false } });
+  });
+  await page.route('**/api/logs/stream', (route) =>
+    route.fulfill({
+      contentType: 'application/x-ndjson',
+      body:
+        JSON.stringify({ text: 'live stream output\n' }) +
+        '\n' +
+        JSON.stringify({ error: 'Stream limit reached; reconnect to continue' }) +
+        '\n',
+    }),
+  );
+  await page.goto('/');
+  await expect(page.locator('.machine-card')).toHaveCount(6);
+  await page.locator('.machine-card').filter({ hasText: 'worker-01' }).click();
+  await page.getByRole('tab', { name: 'Logs' }).click();
+  await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
+  await page.getByRole('button', { name: 'Follow live', exact: true }).click();
+  await expect(page.locator('.terminal pre')).toContainText('live stream output');
+  await expect(page.locator('.terminal-header')).toContainText('STOPPED');
+  await expect(page.getByRole('alert')).toContainText('Stream limit reached');
+  await page.getByRole('button', { name: 'Reload log snapshot' }).click();
+  await expect(page.locator('.terminal pre')).toContainText('Demo kubelet logs');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});

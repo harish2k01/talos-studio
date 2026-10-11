@@ -771,21 +771,25 @@ function Logs({
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [following, setFollowing] = useState(false),
+    [streamed, setStreamed] = useState(false),
     [nonce, setNonce] = useState(0);
+  const active = useRef<AbortController | null>(null);
   useEffect(() => {
     if (!service) return;
+    active.current?.abort();
     const abort = new AbortController();
+    active.current = abort;
+    setFollowing(false);
+    setStreamed(false);
     setText('');
     setError('');
     setBusy(true);
     const append = (chunk: string) => {
       if (!abort.signal.aborted) setText((previous) => (previous + chunk).slice(-250000));
     };
-    const job = following
-      ? followLogs({ context, node, service }, abort.signal, append)
-      : api<{ text: string }>('logs?' + query({ context, node, service }), { signal: abort.signal }).then(
-          (r) => append(r.text),
-        );
+    const job = api<{ text: string }>('logs?' + query({ context, node, service }), {
+      signal: abort.signal,
+    }).then((r) => append(r.text));
     void job
       .catch((e) => {
         if (!abort.signal.aborted) setError(errorText(e));
@@ -793,11 +797,37 @@ function Logs({
       .finally(() => {
         if (!abort.signal.aborted) {
           setBusy(false);
-          if (following) setFollowing(false);
         }
       });
-    return () => abort.abort();
-  }, [context, node, service, following, nonce]);
+    return () => active.current?.abort();
+  }, [context, node, service, nonce]);
+  const toggleFollow = () => {
+    active.current?.abort();
+    if (following) {
+      setFollowing(false);
+      setBusy(false);
+      return;
+    }
+    const abort = new AbortController();
+    active.current = abort;
+    setFollowing(true);
+    setStreamed(true);
+    setBusy(true);
+    setText('');
+    setError('');
+    void followLogs({ context, node, service }, abort.signal, (chunk) => {
+      if (!abort.signal.aborted) setText((previous) => (previous + chunk).slice(-250000));
+    })
+      .catch((e) => {
+        if (!abort.signal.aborted) setError(errorText(e));
+      })
+      .finally(() => {
+        if (!abort.signal.aborted) {
+          setBusy(false);
+          setFollowing(false);
+        }
+      });
+  };
   if (!services.length) return <p className="muted">No services available for log inspection.</p>;
   return (
     <>
@@ -814,7 +844,7 @@ function Logs({
             <option key={s}>{s}</option>
           ))}
         </select>
-        <button disabled={demo} aria-pressed={following} onClick={() => setFollowing(!following)}>
+        <button disabled={demo} aria-pressed={following} onClick={toggleFollow}>
           {following ? 'Stop following' : 'Follow live'}
         </button>
         <button aria-label="Reload log snapshot" disabled={following} onClick={() => setNonce((n) => n + 1)}>
@@ -825,7 +855,7 @@ function Logs({
         <div className="terminal-header">
           <Terminal size={14} />
           {service}
-          <span>{following ? 'LIVE' : 'SNAPSHOT'}</span>
+          <span>{following ? 'LIVE' : streamed ? 'STOPPED' : 'SNAPSHOT'}</span>
         </div>
         <pre>{text || (busy ? 'Waiting for logs…' : 'No logs returned.')}</pre>
       </div>
