@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import type { Connection, Inspector, Machine, Operation, Plan } from '../shared/types.ts';
 import { api, followLogs, query } from './api.ts';
+import { ClusterDashboard } from './ClusterDashboard.tsx';
 
 const pages = [
   { name: 'Overview', icon: LayoutDashboard },
@@ -123,10 +124,6 @@ export function App() {
       machineRequest.current++;
     };
   }, [refresh]);
-  const needs = machines.filter((n) => !n.reachable || n.ready !== true),
-    ready = machines.filter((n) => n.reachable && n.ready === true).length;
-  const planes = machines.filter((n) => n.role === 'controlplane'),
-    versions = new Set(machines.map((n) => n.version));
   const visible = machines.filter(
     (n) =>
       (filter === 'all' || (filter === 'attention' ? !n.reachable || n.ready !== true : n.role === filter)) &&
@@ -149,23 +146,6 @@ export function App() {
           </span>
           Talos <strong>Studio</strong>
         </a>
-        <span className="preview-label">{connection?.demo ? 'DEMO WORKSPACE' : 'LOCAL WORKSPACE'}</span>
-        <div className="top-actions">
-          <span className="bridge">
-            <span className={connection ? 'dot good' : 'dot warn'} />
-            {connection ? 'Bridge connected' : 'Connecting'}
-          </span>
-          <button
-            className="icon-button"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-          >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-        </div>
-      </header>
-      <aside className="sidebar">
-        <div className="nav-caption">Workspace</div>
         <nav aria-label="Main navigation">
           {pages.map((p) => (
             <button
@@ -185,21 +165,28 @@ export function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-bottom">
-          <ShieldCheck size={20} />
-          <div>
-            {connection?.writes ? 'Reviewed writes enabled' : 'Read-only session'}
-            <small>{connection?.demo ? 'Sample data only' : 'Credentials stay local'}</small>
-          </div>
+        <span className="preview-label">{connection?.demo ? 'DEMO WORKSPACE' : 'LOCAL WORKSPACE'}</span>
+        <div className="top-actions">
+          <span className="bridge">
+            <span className={connection ? 'dot good' : 'dot warn'} />
+            {connection ? 'Bridge connected' : 'Connecting'}
+          </span>
+          <button
+            className="icon-button"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
         </div>
-      </aside>
+      </header>
       <main className="main">
         <div className="page-header">
           <div>
             <div className="breadcrumb">
               Workspace <ChevronRight size={12} /> {context || 'Connection'}
             </div>
-            <h1>{selected ? selected.name : page === 'Overview' ? 'Your cluster, at a glance.' : page}</h1>
+            <h1>{selected ? selected.name : page === 'Overview' ? 'Talos // Cluster Control' : page}</h1>
             <p className="muted">
               {selected
                 ? `${role(selected.role)} · ${selected.address} · machine workspace`
@@ -272,62 +259,13 @@ export function App() {
           />
         )}
         {!selected && page === 'Overview' && (
-          <>
-            <div className="summary-grid">
-              <Metric
-                label="Machines ready"
-                value={machines.length ? `${ready} / ${machines.length}` : '—'}
-                detail={
-                  machines.length
-                    ? `${needs.length} need attention`
-                    : loading
-                      ? 'Discovering machines'
-                      : 'No data available'
-                }
-                fraction={machines.length ? ready / machines.length : 0}
-              />
-              <Metric
-                label="Control plane readiness"
-                value={
-                  planes.length
-                    ? `${planes.filter((n) => n.ready === true && n.reachable).length} / ${planes.length}`
-                    : '—'
-                }
-                detail="Machine readiness · not an etcd quorum check"
-                fraction={
-                  planes.length
-                    ? planes.filter((n) => n.ready === true && n.reachable).length / planes.length
-                    : 0
-                }
-              />
-              <Metric
-                label="Talos versions"
-                value={machines.length ? `${versions.size}` : '—'}
-                detail={
-                  versions.size === 1
-                    ? 'Discovered members report one version'
-                    : 'Reported by membership discovery'
-                }
-                fraction={versions.size === 1 ? 1 : 0}
-              />
-            </div>
-            {needs.length > 0 && (
-              <div className="alert">
-                <CircleAlert size={19} />
-                <div>
-                  <strong>
-                    {needs[0].name} {needs[0].reachable ? 'is not ready' : 'is unreachable'}
-                  </strong>
-                  <p>
-                    {needs[0].error || `Stage: ${needs[0].stage}`} · checked {time(needs[0].checkedAt)}
-                  </p>
-                </div>
-                <button onClick={() => setSelected(needs[0])}>
-                  Inspect <ArrowRight size={14} />
-                </button>
-              </div>
-            )}
-          </>
+          <ClusterDashboard
+            context={context}
+            machines={machines}
+            loading={loading}
+            inspect={setSelected}
+            configure={() => setPage('Configuration')}
+          />
         )}
         {!selected && ['Overview', 'Machines'].includes(page) && (
           <section>
@@ -489,28 +427,6 @@ export function App() {
           </button>
         </div>
       )}
-    </div>
-  );
-}
-function Metric({
-  label,
-  value,
-  detail,
-  fraction,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  fraction: number;
-}) {
-  return (
-    <div className="metric-panel">
-      <span className="muted">{label}</span>
-      <div className="metric-value">{value}</div>
-      <p className="muted">{detail}</p>
-      <div className="meter">
-        <span style={{ width: `${fraction * 100}%` }} />
-      </div>
     </div>
   );
 }

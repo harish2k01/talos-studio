@@ -137,3 +137,18 @@ test('machine workspace uses full width and preserves its tab when switching mac
   await page.getByRole('button', { name: 'Back to fleet' }).click();
   await expect(page.locator('.machine-card')).toHaveCount(6);
 });
+
+test('dashboard topology, health matrix and responsive navigation', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('region', { name: 'Cluster dashboard' })).toBeVisible();
+  await expect(page.locator('.health-cell.healthy').first()).toBeVisible();
+  await page.locator('.topology-node').filter({ hasText: 'worker-01' }).click();
+  await expect(page.getByRole('combobox', { name: 'Dashboard machine' })).toHaveValue('192.0.2.14');
+  await expect(page.locator('.machine-focus h2')).toHaveText('worker-01');
+  for (const width of [320, 600, 900, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  await page.locator('.machine-focus').getByRole('button', { name: 'Inspect' }).click();
+  await expect(page.getByRole('region', { name: 'Machine workspace' })).toBeVisible();
+});
